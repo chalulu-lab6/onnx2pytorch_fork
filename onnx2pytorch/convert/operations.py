@@ -279,6 +279,18 @@ def convert_operations(onnx_graph, opset_version, batch_dim=0, enable_pruning=Tr
             op = Upsample(**extract_attributes(node))
         elif node.op_type == "Where":
             op = Where()
+
+        # Modification by Charles (2024/11/19) to handle the Sum operation
+        elif node.op_type == "Sum":
+            from torch.nn import Module
+            class CustomSum(Module):
+                def forward(self, *inputs):
+                    if len(inputs) == 1:
+                        return torch.sum(inputs[0])
+                    else:
+                        return torch.stack(inputs).sum(dim=0)
+            op = CustomSum()
+
         else:
             op = getattr(torch, node.op_type.lower(), None)
             if op is None:
